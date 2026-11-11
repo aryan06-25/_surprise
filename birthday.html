@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Happy Birthday Handsome Boy 💖</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: radial-gradient(circle, #250216 0%, #000000 100%) fixed;
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  #app { max-width: 700px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+  h1, h2, h3, p { text-align: center; color: #ffcc00; text-shadow: 0 0 10px #ff3399; }
+  h2 { font-size: 2rem; margin: 0.6rem 0; }
+  h3 { font-size: 1.4rem; margin: 0.6rem 0; }
+  p { font-size: 1rem; margin: 0.6rem 0; }
+
+  .heart-glow {
+    font-size: 120px; text-align: center; animation: pulse 1.5s infinite;
+    text-shadow: 0 0 30px #ff007f; margin: 10px 0;
+  }
+  @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+
+  .btn {
+    display: block; width: 100%; min-height: 48px; margin: 0.5rem 0;
+    background: rgba(255, 51, 153, 0.15); border: 1px solid #ff3399; border-radius: 12px;
+    color: #ffcc00; font-size: 1rem; cursor: pointer; padding: 0.4rem; font-family: inherit;
+  }
+  .btn:hover, .btn:active { background: rgba(255, 51, 153, 0.35); border-color: #ffffff; }
+
+  .btn-gold {
+    background: linear-gradient(135deg, #ffe066 0%, #f5b041 50%, #d35400 100%);
+    border: 4px dashed #ffffff; border-radius: 20px; padding: 40px 20px;
+    box-shadow: 0 0 30px rgba(245, 176, 65, 0.6);
+    color: #ffffff; font-weight: bold; font-size: 18px; transition: transform .2s ease-in-out;
+  }
+  .btn-gold:hover { transform: scale(1.02); box-shadow: 0 0 40px rgba(255,204,0,.8);
+    background: linear-gradient(135deg, #ffe066 0%, #f5b041 50%, #d35400 100%); border-color:#fff; }
+
+  .row { display: flex; gap: 0.5rem; }
+  .row > * { flex: 1 1 0; min-width: 0; }
+
+  .dots { text-align: center; color: #ff3399; font-size: 2rem; margin: 0.6rem 0; letter-spacing: 2px; }
+  hr { border: 0; border-top: 1px solid rgba(255,255,255,0.25); margin: 1.2rem 0; }
+
+  .msg { padding: 1rem; border-radius: 10px; margin: 0.8rem 0; }
+  .success { background: rgba(40, 167, 69, .2); color: #7dffa0; }
+  .error { background: rgba(220, 53, 69, .2); color: #ff9aa5; }
+  .info { background: rgba(0, 140, 255, .15); color: #cfe8ff; }
+  .warning { background: rgba(255, 193, 7, .18); color: #ffe69c; }
+
+  .metric { text-align: center; padding: 0.5rem 0; }
+  .metric .label { font-size: 0.95rem; color: #ddd; }
+  .metric .value { font-size: 2.2rem; color: #fff; }
+
+  .memory-img { display: block; margin: 10px auto; width: 290px; max-width: 100%; border-radius: 8px; }
+
+  .letter { white-space: pre-line; text-align: left; line-height: 1.6; }
+
+  .balloon-cell { text-align: center; }
+  .balloon-cell .btn { white-space: pre-line; padding: 0.2rem; font-size: 0.9rem; }
+  .boom { font-size: 20px; text-align: center; margin: 0; }
+
+  #toast {
+    position: fixed; right: 16px; bottom: 16px; background: #222; color: #fff;
+    padding: 12px 16px; border-radius: 10px; border: 1px solid #ff3399;
+    display: none; z-index: 9999;
+  }
+  .confetti { position: fixed; top: -40px; font-size: 28px; z-index: 9998; pointer-events: none;
+    animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(360deg); opacity: .9; } }
+
+  @media (max-width: 640px) {
+    #app { padding: 1rem 0.8rem; }
+    .heart-glow { font-size: 80px; }
+    h2 { font-size: 1.5rem; }
+    .btn { font-size: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+
+<script>
+/* ---------- BACKGROUND MUSIC (pehle tap par apne aap shuru) ---------- */
+(function () {
+  var a = document.createElement('audio');
+  a.id = 'bday-bgm'; a.loop = true; a.preload = 'auto';
+  a.src = 'birthday_song.m4a';
+  document.body.appendChild(a);
+  var evs = ['click', 'touchend', 'keydown'];
+  function start() {
+    a.play().then(function () {
+      evs.forEach(function (e) { document.removeEventListener(e, start, true); });
+    }).catch(function () {});
+  }
+  evs.forEach(function (e) { document.addEventListener(e, start, true); });
+  start();
+})();
+
+/* ---------- STATE ---------- */
+var state = {
+  step: 1,
+  pin: "",
+  balloons: [true, true, true, true, true],
+  wish: "Tap a balloon to see the secret wish! 🎈",
+  memoryPage: 1,
+  message: null,   // {type, text} shown on keypad step
+  busy: false
+};
+
+var app = document.getElementById('app');
+
+function go(step) { state.step = step; state.message = null; state.busy = false; render(); }
+
+function toast(text) {
+  var t = document.getElementById('toast');
+  t.textContent = text; t.style.display = 'block';
+  setTimeout(function () { t.style.display = 'none'; }, 3000);
+}
+
+function balloonsEffect() {
+  var items = ['🎈', '🎉', '🎊', '🎈', '✨', '💖'];
+  for (var i = 0; i < 40; i++) {
+    var s = document.createElement('div');
+    s.className = 'confetti';
+    s.textContent = items[Math.floor(Math.random() * items.length)];
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.animationDuration = (2 + Math.random() * 3) + 's';
+    s.style.animationDelay = (Math.random() * 0.8) + 's';
+    document.body.appendChild(s);
+    (function (el) { setTimeout(function () { el.remove(); }, 6000); })(s);
+  }
+}
+
+function fmt(n) { return n.toLocaleString('en-US'); }
+
+/* ---------- RENDER ---------- */
+function render() {
+  var h = '';
+
+  /* STEP 1 */
+  if (state.step === 1) {
+    h += '<h3>A surprise awaits you... ✨</h3>';
+    h += '<p>🎁 Something special, just for you 🎁</p>';
+    h += '<div class="heart-glow">💖</div>';
+    h += '<button class="btn" onclick="go(2)">Tap the gift to open 🎉</button>';
+  }
+
+  /* STEP 2 */
+  else if (state.step === 2) {
+    var len = state.pin.length;
+    var dots = [];
+    for (var i = 0; i < 5; i++) dots.push(i < len ? '●' : '○');
+    h += '<h3>🔒 Enter the secret code</h3>';
+    h += '<p>Hint PIN: 21115</p>';
+    h += '<div class="dots">' + dots.join(' ') + '</div>';
+
+    var cols = [
+      ['1', '4', '7', 'C'],
+      ['2', '5', '8', '0'],
+      ['3', '6', '9', 'B']
+    ];
+    h += '<div class="row">';
+    cols.forEach(function (col) {
+      h += '<div>';
+      col.forEach(function (k) {
+        var label = k === 'C' ? 'Clear ❌' : (k === 'B' ? '⌫ Back' : k);
+        h += '<button class="btn" onclick="key(\'' + k + '\')">' + label + '</button>';
+      });
+      h += '</div>';
+    });
+    h += '</div>';
+    h += '<hr>';
+    h += '<button class="btn" onclick="submitPin()">Submit Code 🔑</button>';
+    if (state.message) h += '<div class="msg ' + state.message.type + '">' + state.message.text + '</div>';
+  }
+
+  /* STEP 3 */
+  else if (state.step === 3) {
+    var birth = new Date(Date.UTC(2005, 10, 21));
+    var target = new Date(Date.UTC(2026, 10, 21));
+    var days = Math.round((target - birth) / 86400000);
+    var years = 2026 - 2005;
+    var hours = days * 24, minutes = hours * 60, seconds = minutes * 60;
+
+    function metric(l, v) { return '<div class="metric"><div class="label">' + l + '</div><div class="value">' + v + '</div></div>'; }
+
+    h += '<h2>Happy Birthday Buddy 🎂</h2>';
+    h += '<p>The World Has Been Better Since:</p>';
+    h += '<div class="row">' + metric('Years ✨', years) + metric('Days 🗓️', fmt(days)) + '</div>';
+    h += '<div class="row">' + metric('Hours ⏳', fmt(hours)) + metric('Minutes 💓', fmt(minutes)) + '</div>';
+    h += metric('Seconds ❤️', fmt(seconds));
+    h += '<hr>';
+    h += '<button class="btn" onclick="go(4)">See Our Memories 📸</button>';
+  }
+
+  /* STEP 4 */
+  else if (state.step === 4) {
+    var memories = {
+      1: { title: "Handsome Boy👫", file: "img.1.jpeg" },
+      2: { title: "Apni dosti ka best frame ✨", file: "img.2.jpeg" },
+      3: { title: "Maa ka pyaar sabse bada tohfa hai 🤲🧿💖", file: "img.3.jpeg" },
+      4: { title: "Ye dekho hero ki entry 👑", file: "img.4.jpeg" }
+    };
+    var cur = memories[state.memoryPage];
+    h += '<h2>Cute Memories 💖</h2>';
+    h += '<h3>' + cur.title + '</h3>';
+    h += '<img class="memory-img" src="' + cur.file + '" alt="memory" ' +
+         'onerror="this.outerHTML=\'<div class=&quot;msg warning&quot;>👉 Please add &#39;' + cur.file + '&#39; image to your folder to view it here!</div>\'">';
+
+    if (state.memoryPage < 4) {
+      h += '<div class="row">';
+      h += '<button class="btn" onclick="prevPic()">◀ Previous Picture</button>';
+      h += '<button class="btn" onclick="nextPic()">Next Picture ▶</button>';
+      h += '</div>';
+    } else {
+      h += '<button class="btn" onclick="prevPic()">◀ Previous Picture</button>';
+      h += '<hr>';
+      h += '<button class="btn" onclick="go(5)">Go to Next Surprise 🎈</button>';
+    }
+  }
+
+  /* STEP 5 */
+  else if (state.step === 5) {
+    var colors = ["🔴", "🔵", "🟡", "🟢", "🟣"];
+    h += '<h2>Pop the Wishes 🎈</h2>';
+    h += '<p>Click on each balloon to pop it and reveal a hidden wish:</p>';
+    h += '<div class="row">';
+    for (var i = 0; i < 5; i++) {
+      h += '<div class="balloon-cell">';
+      if (state.balloons[i]) h += '<button class="btn" onclick="pop(' + i + ')">' + colors[i] + '\nPop</button>';
+      else h += '<p class="boom">💥</p>';
+      h += '</div>';
+    }
+    h += '</div>';
+    h += '<div class="msg info" style="text-align:center">' + state.wish + '</div>';
+    if (!state.balloons.some(function (b) { return b; })) {
+      h += '<div class="msg success">All balloons popped successfully! 🎉</div>';
+      h += '<button class="btn" onclick="go(6)">Unlock Last Surprise 🔓</button>';
+    }
+  }
+
+  /* STEP 6 */
+  else if (state.step === 6) {
+    h += '<h2>One Last Surprise 🌟</h2>';
+    h += '<p>Click directly on the golden card below to scratch and reveal your secret gift:</p>';
+    h += '<button class="btn btn-gold" onclick="scratch()">🎰 TAP HERE TO SCRATCH CARD 🎰<br><br>(Click to reveal the final letter ❤️)</button>';
+  }
+
+  /* STEP 7 */
+  else if (state.step === 7) {
+    h += '<h2>✉️ A Letter Just For You</h2>';
+    h += '<div class="msg info letter">For Buddy,\n\n' +
+      'Happy Birthday Buddy! 🎂\n\n' +
+      'Tere jaisa dost milna kismat ki baat hai. Tune hamesha meri baat suni, ' +
+      'mere saath hasa, aur jab zarurat padi to chattan ki tarah saath khada raha.\n\n' +
+      'Teri wajah se meri life mein masti hai, hasi hai, aur wo yaadein hain ' +
+      'jinhe main kabhi bhoolna nahi chahta.\n\n' +
+      'Dua hai ki tera aane wala saal tere liye khushiyan, kamyabi aur ' +
+      'tere saare sapne poore karne wala ho. Hamesha aisa hi bindaas aur khush reh. 🌟\n\n' +
+      'Aunty JI aur Uncle Ji ko meri trf se Birthday ki dher saari shubhkamnayein! 🎉\n' +
+      'Unka dhyan rkhiyo aur apna bhi khayal rkhiyo.\n\n' +
+      'Forever yours, with all my heart ❤️</div>';
+    h += '<hr>';
+    h += '<button class="btn" onclick="restart()">Restart Surprise App 🔁</button>';
+  }
+
+  app.innerHTML = h;
+  window.scrollTo(0, 0);
+}
+
+/* ---------- ACTIONS ---------- */
+function key(k) {
+  if (state.busy) return;
+  state.message = null;
+  if (k === 'C') state.pin = "";
+  else if (k === 'B') state.pin = state.pin.slice(0, -1);
+  else if (state.pin.length < 5) state.pin += k;
+  render();
+}
+
+function submitPin() {
+  if (state.busy) return;
+  if (state.pin === "21115") {
+    state.busy = true;
+    state.message = { type: 'success', text: 'Access Granted! ✨' };
+    render();
+    setTimeout(function () { go(3); }, 1000);
+  } else {
+    state.busy = true;
+    state.pin = "";
+    state.message = { type: 'error', text: 'Incorrect Code! Please clear and try again.' };
+    render();
+    setTimeout(function () { state.busy = false; state.message = null; render(); }, 1000);
+  }
+}
+
+function prevPic() { if (state.memoryPage > 1) { state.memoryPage--; render(); } }
+function nextPic() { if (state.memoryPage < 4) { state.memoryPage++; render(); } }
+
+function pop(i) {
+  var wishes = [
+    "You deserve the entire universe ✨",
+    "You make my whole world brighter ❤️",
+    "I am the luckiest because of you 🌟",
+    "May all your wildest dreams come true 🪄",
+    "Always stay as handsome  as you are 🌺"
+  ];
+  state.balloons[i] = false;
+  state.wish = wishes[i];
+  render();
+}
+
+function scratch() {
+  if (state.busy) return;
+  state.busy = true;
+  balloonsEffect();
+  toast("🎉 Card Scratched! Opening your letter... 💌");
+  setTimeout(function () { go(7); }, 1000);
+}
+
+function restart() {
+  state.pin = "";
+  state.balloons = [true, true, true, true, true];
+  state.wish = "Tap a balloon to see the secret wish! 🎈";
+  state.memoryPage = 1;
+  go(1);
+}
+
+render();
+</script>
+</body>
+</html>
